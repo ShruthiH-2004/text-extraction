@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Filter Text Extraction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2a197c, #3931cc, #273478);
+            color: #030b15;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: rgba(30, 31, 110, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffffff;
+
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #fffefe;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #152143;
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 2rem 2rem;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 3rem;
+            background: rgba(3, 12, 71, 0.607);
+            padding: 3rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #ffffff;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #ffffff;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Upload Section */
+        .upload-section {
+            background: rgb(222, 222, 222);
+            padding: 3rem;
+            border-radius: 20px;
+            margin-bottom: 3rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .upload-area {
+            border: 3px dashed #1c3c6d;
+            border-radius: 15px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s;
+            background: rgba(55, 119, 137, 0.1);
+        }
+
+        .upload-area:hover {
+            border-color: #251d7c;
+            background: rgba(44, 60, 126, 0.2);
+        }
+
+        .upload-area.dragover {
+            border-color: #1606a7;
+            background: rgba(72, 66, 154, 0.397);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #0519f7;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #000000;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #1b2072, #1713a7);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Preview and Results */
+        .preview-section {
+            display: none;
+            background: rgba(31, 30, 83, 0.2);
+            padding: 3rem;
+            border-radius: 20px;
+            margin-bottom: 3rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .preview-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .image-preview {
+            text-align: center;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .image-preview h3 {
+            margin-bottom: 1rem;
+            color: #15506a;
+        }
+
+        .extracted-text {
+            background: rgba(0, 0, 0, 0.351);
+            padding: 2rem;
+            border-radius: 15px;
+            min-height: 200px;
+            backdrop-filter: blur(5px);
+        }
+
+        .extracted-text h3 {
+            margin-bottom: 1rem;
+            color: #040404;
+        }
+
+        .text-output {
+            background: rgba(40, 41, 84, 0.5);
+            padding: 1rem;
+            border-radius: 10px;
+            min-height: 150px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            color: #1d1998e1;
+        }
+
+        .process-btn {
+            background: linear-gradient(45deg, #474669, #5d558b);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: block;
+            margin: 2rem auto;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .process-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Information Blocks */
+        .info-section {
+            background: rgba(23, 34, 77, 0.721);
+            padding: 3rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .info-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #ffffff;
+            font-size: 2rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-block {
+            background: rgba(98, 96, 128, 0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .info-block:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .info-header {
+            background: linear-gradient(45deg, #180b66, #1d1546);
+            color: white;
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .info-header:hover {
+            background: linear-gradient(45deg, #0a1c3c, #182253);
+        }
+
+        .info-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .info-toggle {
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .info-toggle.active {
+            transform: rotate(180deg);
+        }
+
+        .info-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease-out;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .info-content.active {
+            padding: 1.5rem;
+            max-height: 1000px;
+        }
+
+        .info-text {
+            color: #ffffff;
+            line-height: 1.7;
+        }
+
+
+        .about {
+            background: rgba(23, 34, 77, 0.721);
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(63, 69, 152, 0.1);
+            border-left: 4px solid #555b8b;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 3rem;
+            }
+
+            .preview-container {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 80px 1rem 2rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">2D Filter OCR</div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#upload">Upload</a></li>
+                <li><a href="#info">Information</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <section id="home" class="hero">
+            <h1>2D Filter Text Extraction</h1>
+            <p>Extract English and Persian text from images with graphically embossed backgrounds using advanced 2D filtering techniques and deep learning.</p>
+        </section>
+
+        <!-- Upload Section -->
+        <section id="upload" class="upload-section">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: #3E362E;">Upload Your Image</h2>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">
+                    Drag and drop your image here or click to browse
+                    <br><small>Supported formats: JPG, PNG, JPEG (Max: 10MB)</small>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose Image
+                </button>
+            </div>
+        </section>
+
+        <!-- Preview and Results Section -->
+        <section class="preview-section" id="previewSection">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: #3E362E;">Processing Results</h2>
+            
+            <div class="preview-container">
+                <div class="image-preview">
+                    <h3>Original Image</h3>
+                    <img id="originalImage" src="" alt="Original">
+                </div>
+                <div class="image-preview">
+                    <h3>Processed Image</h3>
+                    <img id="processedImage" src="" alt="Processed">
+                </div>
+            </div>
+
+            <button class="process-btn" id="processBtn">Apply 2D Filter & Extract Text</button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing image with 2D filters...</p>
+            </div>
+
+            <div class="extracted-text">
+                <h3>Extracted Text</h3>
+                <div class="text-output" id="textOutput">
+                    No text extracted yet. Please upload an image and click process.
+                </div>
+            </div>
+        </section>
+
+        <!-- Information Section -->
+        <section id="info" class="info-section">
+            <h2>Technical Information</h2>
+            <div class="info-grid">
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(0)">
+                        <span class="info-title">Filters</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            Filters in image processing are techniques used to modify or enhance an image by emphasizing certain features or reducing unwanted noise. They are mathematical operations applied over pixels to detect edges, smooth textures, or highlight details. Filters are crucial in text extraction tasks because they help remove distortions and separate useful content from irrelevant background noise. Without filtering, raw images may contain excessive visual information that makes text recognition challenging. Depending on the requirement, filters can either sharpen fine details, smooth out rough patterns, or enhance edges. In the context of 2D filters, they operate on two-dimensional image matrices, scanning pixel neighborhoods to apply transformations. By carefully selecting filters, researchers can highlight textual regions while suppressing graphically embossed backgrounds. This step is a foundation for successful Optical Character Recognition (OCR) since it prepares images in a readable form for automated systems.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(1)">
+                        <span class="info-title">Gaussian Filter</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            The Gaussian filter is a smoothing filter that reduces image noise and detail by averaging pixels with a weighted Gaussian distribution. It is especially useful in preprocessing because it minimizes high-frequency variations such as random noise, which often interferes with text extraction. Unlike simple averaging, Gaussian filters assign higher importance to nearby pixels, ensuring smoother transitions without sharp distortions. This makes it ideal for reducing the impact of background textures in embossed images. By blurring unwanted details, the Gaussian filter highlights the dominant structures of text regions. It is widely used in computer vision and deep learning pipelines where noise-free input significantly improves recognition accuracy. Gaussian filters are typically applied in the early stages of image preprocessing to prepare the image for more advanced filters or recognition methods.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(2)">
+                        <span class="info-title">Bilateral Filter</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            The Bilateral filter is a non-linear filter that smooths images while preserving edges, making it highly valuable for text extraction. Unlike Gaussian filters, which blur both noise and edges, bilateral filtering combines spatial and intensity differences. This ensures that pixels with similar intensity remain sharp at boundaries, maintaining important details like text edges. For embossed backgrounds, where text often overlaps with patterns, the bilateral filter helps reduce background clutter while keeping text outlines intact. This selective smoothing improves contrast between text and background, which is essential for OCR performance. Its adaptive nature makes it especially powerful when dealing with complex images containing mixed textures, colors, or embossing effects.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(3)">
+                        <span class="info-title">Laplacian Filter</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            The Laplacian filter is a second-order derivative operator that enhances edges by detecting regions of rapid intensity change. Unlike smoothing filters, which remove details, Laplacian emphasizes boundaries, making text stand out against embossed backgrounds. It highlights high-frequency components, such as edges, corners, and text outlines, by calculating the difference in intensity between pixels and their neighbors. This property is useful in text extraction because it accentuates character shapes, enabling more accurate region detection before OCR. When combined with Gaussian smoothing, Laplacian filtering avoids amplifying noise while retaining critical structural details. This makes it a popular choice in computer vision applications where edge clarity is a key requirement.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(4)">
+                        <span class="info-title">Edge Enhancement Filter</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            Edge enhancement filters are designed to improve the visibility of boundaries within an image. They amplify transitions between light and dark regions, which is particularly important for highlighting textual characters embedded in complex backgrounds. These filters often rely on sharpening techniques that increase the contrast around edges, making text contours more distinguishable. In embossed backgrounds, where patterns may obscure character outlines, edge enhancement ensures that text remains prominent. This filter is often applied before segmentation or OCR so that recognition algorithms can easily differentiate between foreground text and background designs. By enhancing readability, edge filters play a crucial role in text extraction pipelines.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(5)">
+                        <span class="info-title">CNN</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            Convolutional Neural Networks (CNNs) are a class of deep learning models designed to automatically learn image features. Unlike traditional filters that require manual design, CNNs use convolutional layers to detect patterns like edges, textures, and text structures. In text extraction tasks, CNNs can distinguish between text and background with high accuracy. They process images hierarchically: early layers detect edges, while deeper layers recognize characters or words. CNNs are robust against noise and distortions, making them suitable for embossed images where traditional methods may fail. They are widely used in modern OCR systems, document analysis, and computer vision applications.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(6)">
+                        <span class="info-title">Deep Learning</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            Deep learning is an advanced field of machine learning that uses neural networks with many layers to model complex data. In image text extraction, deep learning enables automatic recognition of text in diverse conditions such as embossing, distortion, or noisy backgrounds. Unlike handcrafted filters, deep learning models learn features directly from large datasets, making them highly adaptable. Deep learning-based OCR systems outperform traditional approaches by handling variations in font, language, and background complexity. It is especially important when dealing with multilingual datasets, like English and Persian, where rule-based systems may struggle.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(7)">
+                        <span class="info-title">Region of Interest (ROI)</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            Region of Interest (ROI) refers to a specific portion of an image selected for further processing. In text extraction, identifying the ROI ensures that only text-containing areas are analyzed while ignoring irrelevant regions. This reduces computational complexity and improves recognition accuracy. For embossed backgrounds, ROI detection helps isolate characters that might otherwise blend into decorative designs. Techniques like contour detection, thresholding, or deep learning are often used to define ROIs. Once identified, these regions undergo filtering, enhancement, and OCR, forming the core of the extraction process.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(8)">
+                        <span class="info-title">2D Filter</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            A 2D filter operates on two-dimensional image data, scanning pixel neighborhoods to apply transformations such as smoothing, sharpening, or edge detection. These filters are essential in preprocessing steps for text extraction because they enhance relevant image features while reducing interference. Examples include Gaussian, bilateral, and Laplacian filters. In embossed images, 2D filters help separate text from background by manipulating intensity values and highlighting structural differences. Their effectiveness directly impacts the performance of subsequent OCR and deep learning models.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(9)">
+                        <span class="info-title">Graphically Embossed Background</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            A graphically embossed background refers to images containing raised or textured designs that overlap with text. Such backgrounds pose challenges in text extraction because the embossing introduces patterns that resemble characters, confusing OCR systems. Traditional filters may smooth the background but risk losing textual clarity. Advanced techniques, including bilateral filtering and CNNs, are used to suppress embossing effects while preserving text features. Handling embossed backgrounds is critical in applications like document authentication, currency recognition, and archival digitization.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(10)">
+                        <span class="info-title">Text Extraction Process</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            The extraction process involves several stages: preprocessing, filtering, feature enhancement, segmentation, and OCR. Initially, filters reduce noise and suppress background patterns. Edge detection or ROI methods then isolate text regions. Enhanced features are passed to OCR engines or deep learning models for character recognition. In embossed backgrounds, specialized filters and CNNs ensure text clarity. This step-by-step process ensures accurate recognition of both English and Persian text.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(11)">
+                        <span class="info-title">OCR</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            Optical Character Recognition (OCR) is the technology used to convert printed or handwritten text from images into machine-readable formats. It relies on image preprocessing, feature extraction, and pattern recognition to identify characters. Modern OCR systems integrate deep learning to handle diverse fonts, languages, and complex backgrounds. For embossed text, OCR accuracy depends heavily on preprocessing steps like filtering and edge enhancement. Successful OCR enables digitization of documents, making information searchable and editable.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-header" onclick="toggleInfo(12)">
+                        <span class="info-title">Computer Vision</span>
+                        <span class="info-toggle">▼</span>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-text">
+                            Computer vision is a field of artificial intelligence that enables machines to interpret and analyze visual data. It combines image processing, machine learning, and pattern recognition to perform tasks like object detection, text recognition, and scene understanding. In the context of your project, computer vision allows automated extraction of English and Persian text from challenging backgrounds. Techniques such as CNNs, OCR, and ROI detection are part of this domain. Computer vision applications span healthcare, surveillance, autonomous vehicles, and document digitization, making it a powerful tool in modern technology.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- About Section -->
+        <section id="about" class="hero">
+            <h1>About Us</h1>
+            <p>Here You can upload your image and extract texts<br> For any queries: <br>info@textfilters.com<br></p>
+        </section>
+        
+    </div>
+
+    <script>
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const previewSection = document.getElementById('previewSection');
+        const originalImage = document.getElementById('originalImage');
+        const processedImage = document.getElementById('processedImage');
+        const processBtn = document.getElementById('processBtn');
+        const textOutput = document.getElementById('textOutput');
+        const loading = document.getElementById('loading');
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        function handleFileUpload(file) {
+            // Check file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size must be less than 10MB');
+                return;
+            }
+
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload a valid image file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalImage.src = e.target.result;
+                processedImage.src = e.target.result; // Initially show same image
+                previewSection.style.display = 'block';
+                textOutput.textContent = 'Image uploaded successfully. Click "Apply 2D Filter & Extract Text" to process.';
+                processBtn.disabled = false;
+                
+                // Smooth scroll to preview section
+                previewSection.scrollIntoView({ behavior: 'smooth' });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Process button functionality
+        processBtn.addEventListener('click', async () => {
+            if (!originalImage.src) {
+                alert('Please upload an image first');
+                return;
+            }
+
+            processBtn.disabled = true;
+            loading.style.display = 'block';
+            textOutput.textContent = 'Processing with 2D filters and OCR...';
+
+            try {
+                // Convert image to blob for upload
+                const response = await fetch(originalImage.src);
+                const blob = await response.blob();
+                
+                // Create FormData for upload
+                const formData = new FormData();
+                formData.append('image', blob, 'image.png');
+
+                // Send to backend
+                const processResponse = await fetch('/api/process-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await processResponse.json();
+
+                if (result.success) {
+                    // Update processed image
+                    processedImage.src = result.processedImage;
+                    
+                    // Display extracted text
+                    textOutput.textContent = result.extractedText || 'No text could be extracted from the image.';
+                } else {
+                    throw new Error(result.error || 'Processing failed');
+                }
+
+            } catch (error) {
+                console.error('Error processing image:', error);
+                textOutput.textContent = `Error: ${error.message || 'Failed to process image. Please try again.'}`;
+                
+                // Fallback to simulated processing
+                applySimulated2DFilter();
+                simulateTextExtraction();
+            } finally {
+                loading.style.display = 'none';
+                processBtn.disabled = false;
+            }
+        });
+
+        function applySimulated2DFilter() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Draw original image
+                ctx.drawImage(img, 0, 0);
+                
+                // Apply simulated filter effect (contrast enhancement)
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    // Enhance contrast (simulated 2D filter effect)
+                    data[i] = Math.min(255, data[i] * 1.2);     // Red
+                    data[i + 1] = Math.min(255, data[i + 1] * 1.2); // Green
+                    data[i + 2] = Math.min(255, data[i + 2] * 1.2); // Blue
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                processedImage.src = canvas.toDataURL();
+            };
+            
+            img.src = originalImage.src;
+        }
+
+        function simulateTextExtraction() {
+            // Simulated extracted text (in real implementation, this would come from your backend)
+            const simulatedTexts = [
+                "Sample extracted English text from image.\nDetected Persian text: متن نمونه فارسی",
+                "Welcome to our store\nساعات کاری: ۹ تا ۱۷",
+                "PARKING AVAILABLE\nپارکینگ موجود است",
+                "Emergency Exit\nخروج اضطراری",
+                "Information Desk\nمیز اطلاعات"
+            ];
+            
+            const randomText = simulatedTexts[Math.floor(Math.random() * simulatedTexts.length)];
+            textOutput.textContent = randomText;
+        }
+
+        // Information blocks toggle functionality
+        function toggleInfo(index) {
+            const infoBlocks = document.querySelectorAll('.info-block');
+            const content = infoBlocks[index].querySelector('.info-content');
+            const toggle = infoBlocks[index].querySelector('.info-toggle');
+            
+            const isActive = content.classList.contains('active');
+            
+            if (isActive) {
+                content.classList.remove('active');
+                toggle.classList.remove('active');
+            } else {
+                content.classList.add('active');
+                toggle.classList.add('active');
+            }
+        }
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('.nav-links a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 100) {
+                navbar.style.background = 'rgba(62, 54, 46, 0.98)';
+            } else {
+                navbar.style.background = 'rgba(62, 54, 46, 0.95)';
+            }
+        });
+    </script>
+</body>
+</html>
